@@ -23,8 +23,9 @@ class IostCrossChainManager {
       throw "nextBookers illegal"
     }
     this._setCurrentEpochHeight(header.height);
-    this._put(INIT_STATUS_KEY, 1);
+    this._setEpochKeeperPubKeys(bookKeeper.keepers);
 
+    this._put(INIT_STATUS_KEY, 1);
     blockchain.event(JSON.stringify({height: header.height, rawHeader}))
   }
 
@@ -59,8 +60,21 @@ class IostCrossChainManager {
     return this._getBookKeeper(n, n - (n -1)/3, pubkeyList)
   }
 
+  _serializeKeepers(keepers) {
+    return JSON.stringify(keepers)
+  }
+
+  _deserializeKeepers() {
+
+  }
+
   _setCurrentEpochHeight(height) {
     this._put("currentEpochHeight", height)
+  }
+
+  // keepers: string[]
+  _setEpochKeeperPubKeys(keepers) {
+    this._put("keeperPubKeys", this._serializeKeepers(keepers))
   }
 
   _getBookKeeper(keyLen, minSigNum, pubkeyList) {
