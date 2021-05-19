@@ -3,6 +3,8 @@ const POLYCHAIN_PUBKEY_LEN = 67;
 const POLYCHAIN_SIGNATURE_LEN = 65;
 
 const INIT_STATUS_KEY = "INIT_STATUS";
+const CURRENT_EPOCH_HEIGHT_KEY = "currentEpochHeight";
+const EPOCH_KEEPERS_PUBKEY_KEY = "keeperPubKeys";
 
 class IostCrossChainManager {
   init () {}
@@ -27,6 +29,40 @@ class IostCrossChainManager {
 
     this._put(INIT_STATUS_KEY, 1);
     blockchain.event(JSON.stringify({height: header.height, rawHeader}))
+  }
+
+  // rawHeader: byte[]
+  // pubkeyList: byte[]
+  // sigList: byte[]
+  changeBookKeeper(rawHeader, pubKeyList, sigList) {
+    const header = this._deserializerHeader(rawHeader);
+    const currentHeight = this._getCurrentEpochHeight();
+    if (header.height <= currentHeight) {
+      throw "The height of header is lower than current epoch start height!"
+    }
+    if (!header.nextBookKeeper) {
+      throw "The nextBookKeeper of header is empty"
+    }
+    const keepers = this._deserializeKeepers(this._getEpochKeeperPubKeys());
+    const n = keepers.length;
+    if(!this._verifySig(rawHeader, sigList, keepers, n - (n-1) / 3)){
+      throw "Verify signature failed!"
+    }
+    const bookKeeper = this._verifyPubKey(pubKeyList);
+    if(header.nextBookKeeper !== bookKeeper.nextBookKeeper) {
+      throw  "NextBookers illegal"
+    }
+    this._setCurrentEpochHeight(header.height);
+    this._setEpochKeeperPubKeys(bookKeeper.keepers);
+    blockchain.event(JSON.stringify({height: header.height, rawHeader}))
+  }
+
+  crossChain() {
+
+  }
+
+  verifyHeaderAndExecuteTx() {
+
   }
 
   _contractOwnerAuth() {
@@ -60,21 +96,37 @@ class IostCrossChainManager {
     return this._getBookKeeper(n, n - (n -1)/3, pubkeyList)
   }
 
+  // rawHeader: byte[]
+  // pubkeyList: byte[]
+  // keepers: string[]
+  // m: number
+  _verifySig(rawHeader, signList, keepers, m) {
+
+  }
+
   _serializeKeepers(keepers) {
     return JSON.stringify(keepers)
   }
 
-  _deserializeKeepers() {
-
+  _deserializeKeepers(data) {
+    return JSON.parse(data)
   }
 
   _setCurrentEpochHeight(height) {
-    this._put("currentEpochHeight", height)
+    this._put(CURRENT_EPOCH_HEIGHT_KEY, height)
+  }
+
+  _getCurrentEpochHeight() {
+    return storage.get(CURRENT_EPOCH_HEIGHT_KEY)
   }
 
   // keepers: string[]
   _setEpochKeeperPubKeys(keepers) {
-    this._put("keeperPubKeys", this._serializeKeepers(keepers))
+    this._put(EPOCH_KEEPERS_PUBKEY_KEY, this._serializeKeepers(keepers))
+  }
+
+  _getEpochKeeperPubKeys() {
+
   }
 
   _getBookKeeper(keyLen, minSigNum, pubkeyList) {
@@ -84,6 +136,7 @@ class IostCrossChainManager {
       buff = pubkeyList.slice(i * POLYCHAIN_PUBKEY_LEN, POLYCHAIN_PUBKEY_LEN);
       keepers[i] = pubkeyList.slice(i * POLYCHAIN_PUBKEY_LEN, POLYCHAIN_PUBKEY_LEN).slice(3, 64);
     }
+    return {keepers: [], nextBookKeeper: Buffer.from("")}
   }
 
   _writeVarBytes(source, target) {
