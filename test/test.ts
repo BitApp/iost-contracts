@@ -14,3 +14,8 @@ for(let i=0; i<16; i++) {
 // console.log(off)
 //
 // let buff = new Uint16Array(16);
+const keyLen = 4;
+
+let buff = new Uint16Array(keyLen);
+console.log(buff)
+let buff2 = Buffer.from([0x02]);

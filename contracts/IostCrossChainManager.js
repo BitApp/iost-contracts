@@ -174,7 +174,7 @@ class IostCrossChainManager {
   }
 
   _getBookKeeper(keyLen, minSigNum, pubkeyList) {
-    let buff = new Uint16Array(keyLen);
+    let buff = this._writeUint16(Buffer.from([]), keyLen);
     const keepers = new Array(20);
     for (let i = 0; i < keyLen; i++) {
       buff = pubkeyList.slice(i * POLYCHAIN_PUBKEY_LEN, POLYCHAIN_PUBKEY_LEN);
@@ -199,6 +199,21 @@ class IostCrossChainManager {
     } else {
 
     }
+  }
+
+  _writeUint16(buff, value) {
+    return Buffer.concat([buff, this._padRight(Buffer.from(value), 2)])
+  }
+
+  _padRight(buff, len) {
+    const l = buff.length;
+    if (l > len) {
+      buff = buff.slice(0, len)
+    }
+    for (let i = 0; i < length - l; i++) {
+      buff = Buffer.concat([buff, Buffer.from([0x00])])
+    }
+    return buff
   }
 
   _nextByte(buff, offset) {
