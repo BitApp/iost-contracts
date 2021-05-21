@@ -1,0 +1,26 @@
+{
+  "name": "iost-contracts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_ENV=localhost ts-node-dev ./test/test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BitApp/iost-contracts.git"
+  },
+  "author": "HFFP",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BitApp/iost-contracts/issues"
+  },
+  "homepage": "https://github.com/BitApp/iost-contracts#readme",
+  "devDependencies": {
+    "@types/node": "^15.3.1",
+    "ts-node-dev": "^1.1.6"
+  },
+  "dependencies": {
+    "typescript": "^4.2.4"
+  }
+}

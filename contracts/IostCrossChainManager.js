@@ -78,11 +78,55 @@ class IostCrossChainManager {
     }
   }
 
-  // source: byte[]
-  _deserializerHeader (source) {
+  // headerBs: byte[]
+  _deserializerHeader (headerBs) {
     let offset = 0;
-    const version = new Int64(source.slice(offset, 4));
-    return {}
+    let ret;
+    const header = {};
+
+    ret = this._nextUint32(headerBs, offset);
+    header.version = ret[0];
+    offset = ret[1];
+
+    ret = this._nextUint64(headerBs, offset);
+    header.chainId = ret[0];
+    offset = ret[1];
+
+    ret = this._nextHash(headerBs, offset);
+    header.prevBlockHash = ret[0];
+    offset = ret[1];
+
+    ret = this._nextHash(headerBs, offset);
+    header.transactionRoot = ret[0];
+    offset = ret[1];
+
+    ret = this._nextHash(headerBs, offset);
+    header.crossStatesRoot = ret[0];
+    offset = ret[1];
+
+    ret = this._nextHash(headerBs, offset);
+    header.blockRoot = ret[0];
+    offset = ret[1];
+
+    ret = this._nextUint32(headerBs, offset);
+    header.timeStamp = ret[0];
+    offset = ret[1];
+
+    ret = this._nextUint32(headerBs, offset);
+    header.height = ret[0];
+    offset = ret[1];
+
+    ret = this._nextUint64(headerBs, offset);
+    header.consensusData = ret[0];
+    offset = ret[1];
+
+    ret = this._nextVarBytes(headerBs, offset);
+    header.consensusPayload = ret[0];
+    offset = ret[1];
+
+    ret = this._nextBytes(headerBs, offset, 20);
+    header.nextBookKeeper = ret[0];
+    return header;
   }
 
   _verifyPubKey(pubkeyList) {
@@ -147,13 +191,109 @@ class IostCrossChainManager {
     if (value < 0) {
       return  source;
     }else if (value < 0xFD) {
-      var v = value.to
+      let v = value.to
     } else if (value <=0xFFFF) {
 
     } else if (value <= 0XFFFFFFFF) {
 
     } else {
 
+    }
+  }
+
+  _nextByte(buff, offset) {
+    const newOff = offset + 1;
+    if (newOff <= buff.length) {
+      return [buff.slice(offset, newOff), newOff]
+    }
+    throw "NextByte, offset exceeds maximum"
+  }
+
+  _nextBytes(buff, offset, len) {
+    const newOff = offset + len;
+    if (newOff <= offset) {
+      return [buff.slice(offset, newOff), newOff]
+    }
+    throw "NextBytes, offset exceeds maximum"
+  }
+
+  _nextUint16(buff, offset) {
+    const newOff = offset + 2;
+    if (newOff <= buff.length) {
+      return [buff.slice(offset, newOff).readUInt16BE(), newOff];
+    }
+    throw "NextUint16, offset exceeds maximum"
+  }
+
+  _nextUint32(buff, offset) {
+    const newOff = offset + 4;
+    if (newOff <= buff.length) {
+      return [buff.slice(offset, newOff).readUInt32BE(), newOff];
+    }
+    throw "NextUint32, offset exceeds maximum"
+  }
+
+  _nextUint64(buff, offset) {
+    const newOff = offset + 8;
+    if (newOff <= buff.length) {
+      return [buff.slice(offset, newOff).readBigUInt64BE(), newOff];
+    }
+    throw "NextUint64, offset exceeds maximum"
+  }
+
+  _nextHash(buff, offset) {
+    const newOff = offset + 32;
+    if (newOff <= buff.length) {
+      return [buff.slice(offset, newOff), newOff]
+    }
+    throw "NextHash, offset exceeds maximum"
+  }
+
+  _nextVarBytes(buff, offset) {
+    let ret = this._nextVarUint(buff, offset);
+    let count = ret[0];
+    offset = ret[1];
+    return this._nextBytes(buff, offset, count)
+  }
+
+  _nextVarUint(buff, offset) {
+    let v;
+    let ret;
+    ret = this._nextByte(buff, offset);
+    v = ret[0];
+    offset = ret[1];
+
+    let value;
+    if (v === 0xFD) {
+      ret = this._nextUint16(buff, offset);
+      value = ret[0];
+      offset = ret[1];
+      if (value < 0xFD || value > 0xFFFF) {
+        throw "NextUint16, value outside range";
+      }
+      return [value, offset];
+    } else if ( v === 0xFE) {
+      ret = this._nextUint32(buff, offset);
+      value = ret[0];
+      offset = ret[1];
+      if (value <= 0xFFFF || value > 0xFFFFFFFF) {
+        throw "NextVarUint, value outside range"
+      }
+      return [value, offset];
+    } else if ( v === 0xFF) {
+      ret = this._nextUint64(buff, offset);
+      value = ret[0];
+      offset = ret[1];
+      if (value < 0xFFFFFFFF) {
+        throw "NextVarUint, value outside range"
+      }
+      return [value, offset];
+    } else {
+      value = 0x00;
+      if (value >= 0xFD) {
+        throw "NextVarUint, value outside range"
+      }
+      return [value, offset];
     }
   }
 
