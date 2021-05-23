@@ -177,27 +177,46 @@ class IostCrossChainManager {
     let buff = this._writeUint16(Buffer.from([]), keyLen);
     const keepers = new Array(20);
     for (let i = 0; i < keyLen; i++) {
-      buff = pubkeyList.slice(i * POLYCHAIN_PUBKEY_LEN, POLYCHAIN_PUBKEY_LEN);
-      keepers[i] = pubkeyList.slice(i * POLYCHAIN_PUBKEY_LEN, POLYCHAIN_PUBKEY_LEN).slice(3, 64);
+      buff = this._writeVarBytes(buff, this._compressMCPubKey(pubkeyList.slice(i * POLYCHAIN_PUBKEY_LEN, POLYCHAIN_PUBKEY_LEN)));
+      keepers[i] = IOSTCrypto.sha3(pubkeyList.slice(i * POLYCHAIN_PUBKEY_LEN, POLYCHAIN_PUBKEY_LEN).slice(3, 64))
     }
-    return {keepers: [], nextBookKeeper: Buffer.from("")}
+    buff = this._writeUint16(buff, m);
+    let nextBookKeeper = IOSTCrypto.sha3(buff)
+    return {keepers, nextBookKeeper}
+  }
+
+  _compressMCPubKey(buff) {
+    if (buff.length < 67) {
+      throw "key length is too short"
+    }
+    let newBuff = buff.slice(0, 35);
+    if (buff[66] % 2 === 0) {
+      newBuff[2] = Buffer.from([0x02])
+    } else {
+      newBuff[2] = Buffer.from([0x03])
+    }
+    return newBuff
   }
 
   _writeVarBytes(source, target) {
-    return _writeVarInt(target.length, source).concat(target)
+    return this._writeVarInt(target.length, source).concat(target)
   }
 
   _writeVarInt(value, source) {
     if (value < 0) {
       return  source;
     }else if (value < 0xFD) {
-      let v = value.to
+      let v = this._padRight(Buffer.from(value), 1);
+      return Buffer.concat([source, v]);
     } else if (value <=0xFFFF) {
-
+      let v = this._padRight(Buffer.from(value), 2);
+      return Buffer.concat([source, Buffer.from([0xFD]), v]);
     } else if (value <= 0XFFFFFFFF) {
-
+      let v = this._padRight(Buffer.from(value), 4);
+      return Buffer.concat([source, Buffer.from([0xFE]), v]);
     } else {
-
+      let v = this._padRight(Buffer.from(value), 8);
+      return Buffer.concat([source, Buffer.from([0xFF]), v]);
     }
   }
 
